@@ -20,7 +20,7 @@ Adhering to these guidelines ensures consistency, maintainability, and clarity f
 5. [LLM Interaction and AI Patterns](#llm-interaction-and-ai-patterns)
 6. [Tool Usage Patterns](#tool-usage-patterns)
 7. [Durable Objects](#durable-objects)
-   - [How to Add a Durable Object](#how-to-add-a-durable-object)
+   - [How to Add a Durable Object](#71-how-to-add-a-durable-object)
 8. [Workflows](#workflows)
    - [How to Add a Workflow](#how-to-add-a-workflow)
    - [Step-by-Step Patterns](#step-by-step-patterns)
