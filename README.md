@@ -26,8 +26,14 @@ Adhering to these guidelines ensures consistency, maintainability, and clarity f
    - [Step-by-Step Patterns](#82-step-by-step-patterns)
 9. [Parallel Calls and Aggregation](#9-parallel-calls-and-aggregation)
    - [Common Architecture Patterns](#91-common-architecture-patterns)
-11. [Configuration Files and Deployment](#10-configuration-files-and-deployment)
-12. [Style Conventions and Coding Tips](#11-style-conventions-and-coding-tips)
+     - [Structured Outputs](#structured-outputs)
+     - [Parallelisation](#parallelisation)
+     - [Orchestrator Workers](#orchestrator-workers)
+     - [Evaluator-Optimiser](#evaluator-optimiser)
+     - [Human-in-the-loop](#human-in-the-loop)
+     - [Agentic Patterns](#agentic-patterns)
+10. [Configuration Files and Deployment](#10-configuration-files-and-deployment)
+11. [Style Conventions and Coding Tips](#11-style-conventions-and-coding-tips)
 
 ---
 
