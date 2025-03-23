@@ -25,8 +25,9 @@ Adhering to these guidelines ensures consistency, maintainability, and clarity f
    - [How to Add a Workflow](#81-how-to-add-a-workflow)
    - [Step-by-Step Patterns](#82-step-by-step-patterns)
 9. [Parallel Calls and Aggregation](#9-parallel-calls-and-aggregation)
-10. [Configuration Files and Deployment](#10-configuration-files-and-deployment)
-11. [Style Conventions and Coding Tips](#11-style-conventions-and-coding-tips)
+   - [Common Architecture Patterns](#91-common-architecture-patterns)
+11. [Configuration Files and Deployment](#10-configuration-files-and-deployment)
+12. [Style Conventions and Coding Tips](#11-style-conventions-and-coding-tips)
 
 ---
 
