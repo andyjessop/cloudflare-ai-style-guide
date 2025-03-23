@@ -373,6 +373,361 @@ Inside a Workflow, nest the `Promise.all` inside `step.do(...)` for a named step
 
 ---
 
+
+## 9.1 Common Architecture Patterns
+
+These **common patterns** demonstrate architectures tested across AI Worker deployments.
+
+### Structured Outputs
+
+When you need predictable, typed output from LLMs:
+
+```ts
+app.post("/", async (c) => {
+  const workersai = createWorkersAI({ binding: c.env.AI });
+  const { object } = await generateObject({
+    model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
+    schema: z.object({
+      recipe: z.object({
+        name: z.string(),
+        ingredients: z.array(z.object({ 
+          name: z.string(), 
+          amount: z.string() 
+        })),
+        steps: z.array(z.string()),
+      }),
+    }),
+    prompt: "Give me a recipe for sourdough bread.",
+  });
+  return c.json(object);
+});
+```
+
+### Prompt Chaining
+
+For multi-stage prompting with dependencies between steps:
+
+```ts
+class PromptChainingWorkflow extends WorkflowEntrypoint {
+  async run(event: WorkflowEvent<{ prompt: string }>, step: WorkflowStep) {
+    // Step 1: Generate outline
+    const outlineObj = await step.do("generate outline", async () => {
+      return await generateObject({
+        model,
+        schema: outlineSchema,
+        prompt: `${prompt}\n\nPlease generate a detailed outline.`,
+      });
+    });
+
+    // Step 2: Evaluate outline
+    const criteriaObj = await step.do("evaluate outline", async () => {
+      return await generateObject({
+        model,
+        schema: criteriaSchema,
+        prompt: `Evaluate this outline:\n\n${JSON.stringify(outlineObj)}`,
+      });
+    });
+
+    // Step 3: Generate final if criteria met
+    if (criteriaObj.meetsCriteria) {
+      return await step.do("generate final", async () => {
+        return await generateObject({
+          model,
+          schema: finalSchema,
+          prompt: `Using this outline:\n\n${JSON.stringify(outlineObj)}`,
+        });
+      });
+    }
+  }
+}
+```
+
+### Parallelisation
+
+When multiple perspectives or angles are needed:
+
+```ts
+class ParallelisationWorkflow extends WorkflowEntrypoint {
+  async run(event: WorkflowEvent<{ prompt: string }>, step: WorkflowStep) {
+    // Run parallel analysis with smaller models
+    const angleOutputs = await step.do("parallel angle calls", async () => {
+      const calls = [
+        "technical perspective",
+        "creative perspective", 
+        "user-centric perspective"
+      ].map(async (angle) => {
+        const { object } = await generateObject({
+          model: smallModel,
+          schema: angleSchema,
+          prompt: `Analyze from ${angle}:\n\n${prompt}`,
+        });
+        return object.output;
+      });
+      return Promise.all(calls);
+    });
+
+    // Aggregate with larger model
+    return await step.do("aggregate responses", async () => {
+      return await generateObject({
+        model: bigModel,
+        schema: finalSchema,
+        prompt: `Synthesize these perspectives:\n\n${angleOutputs.join("\n\n")}`,
+      });
+    });
+  }
+}
+```
+
+### Orchestrator Workers
+
+For coordinating multiple specialized Workers:
+
+```ts
+class OrchestratorWorkflow extends WorkflowEntrypoint {
+  async run(event: WorkflowEvent<{ prompt: string }>, step: WorkflowStep) {
+    // Break task into subtasks
+    const orchestratorResult = await step.do("generate subtasks", async () => {
+      return await generateObject({
+        model: bigModel,
+        schema: orchestratorSchema,
+        prompt: `Break this task into subtasks:\n\n${prompt}`,
+      });
+    });
+
+    // Execute parallel subtasks
+    const workerResponses = await step.do("execute subtasks", async () => {
+      return Promise.all(orchestratorResult.tasks.map(async (taskPrompt) => {
+        const { object } = await generateObject({
+          model: smallModel,
+          schema: workerSchema,
+          prompt: taskPrompt,
+        });
+        return object.response;
+      }));
+    });
+
+    // Synthesize final response
+    return await step.do("synthesize responses", async () => {
+      return await generateObject({
+        model: bigModel,
+        schema: finalSchema,
+        prompt: `Synthesize subtask results:\n\n${workerResponses.join("\n")}`,
+      });
+    });
+  }
+}
+```
+
+### Evaluator-Optimiser
+
+For iterative improvement with quality checks:
+
+```ts
+class EvaluatorOptimiserWorkflow extends WorkflowEntrypoint {
+  async run(event: WorkflowEvent<{ prompt: string }>, step: WorkflowStep) {
+    // Initial draft
+    const draftObj = await step.do("generate draft", async () => {
+      return await generateObject({
+        model: smallModel,
+        schema: draftSchema,
+        prompt: event.payload.prompt,
+      });
+    });
+
+    // Evaluate draft
+    const evaluationObj = await step.do("evaluate draft", async () => {
+      return await generateObject({
+        model: smallModel,
+        schema: evaluationSchema,
+        prompt: `Evaluate this draft:\n\n${draftObj.draft}`,
+      });
+    });
+
+    // Optimize if needed
+    if (evaluationObj.needsRevision) {
+      return await step.do("optimize draft", async () => {
+        return await generateObject({
+          model: bigModel,
+          schema: optimizedSchema,
+          prompt: `Improve based on:\nDraft: ${draftObj.draft}\nFeedback: ${evaluationObj.feedback}`,
+        });
+      });
+    }
+
+    return draftObj;
+  }
+}
+```
+
+### Human-in-the-Loop
+
+When human confirmation is needed before actions:
+
+```ts
+export class TaskManagerAgent extends Agent<{ AI: any }, TaskManagerState> {
+  initialState = {
+    tasks: [],
+    confirmations: []
+  };
+
+  async query(query: string) {
+    const { action } = await this.determineAction(query);
+
+    if (action === "add") {
+      const newConfirmation = {
+        id: crypto.randomUUID(),
+        action: "add",
+        title: await this.extractTitle(query),
+      };
+
+      this.setState({
+        ...this.state,
+        confirmations: [...this.state.confirmations, newConfirmation],
+      });
+
+      return { confirmation: newConfirmation };
+    }
+  }
+
+  async confirm(confirmationId: string, userConfirmed: boolean) {
+    const confirmation = this.state.confirmations.find(c => c.id === confirmationId);
+
+    if (userConfirmed && confirmation?.action === "add") {
+      const result = this.addTask(confirmation.title);
+      this.removeConfirmation(confirmationId);
+      return result;
+    }
+
+    this.removeConfirmation(confirmationId);
+    return "Action not confirmed";
+  }
+}
+```
+
+These patterns can be mixed and matched based on your specific needs. For example, you might use parallelisation within an evaluator-optimiser workflow, or add human-in-the-loop confirmation to an orchestrator pattern.
+
+### Agentic Patterns
+
+For more advanced cases where an LLM acts as an autonomous agent:
+
+```ts
+// Planning pattern - break tasks into subtasks
+async function planAndExecute(task: string) {
+  // First plan subtasks
+  const plan = await generateObject({
+    model,
+    schema: z.object({
+      subtasks: z.array(z.object({
+        id: z.string(),
+        task: z.string(),
+        dependencies: z.array(z.string())
+      }))
+    }),
+    prompt: `Break this task into subtasks: ${task}`
+  });
+
+  // Then execute in dependency order
+  const results = new Map();
+  for (const subtask of orderByDependencies(plan.subtasks)) {
+    results.set(subtask.id, await executeSubtask(subtask, results));
+  }
+  return results;
+}
+
+// ReAct pattern - Reason, Act, Observe loop
+async function reactLoop(goal: string) {
+  let state = { goal, observations: [] };
+
+  while (!goalAchieved(state)) {
+    // Reason about current state
+    const reasoning = await generateObject({
+      model,
+      schema: z.object({
+        thought: z.string(),
+        action: z.object({
+          tool: z.string(),
+          args: z.record(z.any())
+        })
+      }),
+      prompt: `Goal: ${state.goal}\nObservations: ${state.observations.join("\n")}\nWhat should we do next?`
+    });
+
+    // Act using selected tool
+    const result = await executeTool(reasoning.action);
+
+    // Observe and update state
+    state.observations.push(result);
+  }
+
+  return state;
+}
+
+// Reflection pattern - periodically assess and adjust
+class ReflectiveAgent extends Agent {
+  async act(input: string) {
+    // Regular action
+    const result = await this.executeAction(input);
+
+    // Periodic reflection
+    if (this.shouldReflect()) {
+      const reflection = await generateObject({
+        model,
+        schema: z.object({
+          assessment: z.string(),
+          improvements: z.array(z.string())
+        }),
+        prompt: `Review recent actions:\n${this.getHistory()}\nWhat could be improved?`
+      });
+
+      // Update behavior based on reflection
+      await this.adjustStrategy(reflection.improvements);
+    }
+
+    return result;
+  }
+}
+
+// Scheduling pattern - manage time-based tasks
+class SchedulerAgent extends Agent {
+  async scheduleTask(description: string) {
+    const schedule = await generateObject({
+      model,
+      schema: z.object({
+        timing: z.object({
+          type: z.enum(["immediate", "delayed", "recurring"]),
+          value: z.string() // ISO date or cron expression
+        }),
+        priority: z.number(),
+        dependencies: z.array(z.string())
+      }),
+      prompt: `When should we schedule: ${description}`
+    });
+
+    return this.addToSchedule({
+      task: description,
+      timing: schedule.timing,
+      priority: schedule.priority
+    });
+  }
+}
+```
+
+These patterns enable more sophisticated agent behaviors:
+
+- **Planning**: Breaking complex tasks into manageable subtasks
+- **ReAct**: Iterative cycle of Reasoning, Acting, and Observing 
+- **Reflection**: Self-assessment and strategy adjustment
+- **Scheduling**: Time-aware task management
+
+Consider implementing these when your agent needs to:
+
+- Handle multi-step tasks autonomously
+- Learn from past interactions
+- Manage complex schedules
+- Make reasoned decisions about tool usage
+
+The patterns can be combined - for example, a ReAct loop could include reflection steps, or a planner could work with a scheduler for time-sensitive tasks.
+
 ## 10. Configuration Files and Deployment
 
 Typical deployment is done with:
