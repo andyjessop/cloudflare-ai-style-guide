@@ -1,4 +1,4 @@
-# Cloudflare Workers – Style Guide
+# AI on Cloudflare Workers – A Style Guide
 
 A **style guide** for building Cloudflare Worker projects that make use of:
 
