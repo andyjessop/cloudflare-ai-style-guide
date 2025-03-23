@@ -1,6 +1,6 @@
 # Cloudflare Workers – Style Guide
 
-An **agnostic style guide** for building Cloudflare Worker projects that make use of:
+A **style guide** for building Cloudflare Worker projects that make use of:
 
 - [Hono](https://hono.dev/) for routing
 - [Workers AI Provider](https://www.npmjs.com/package/workers-ai-provider) for LLM interactions
