@@ -13,20 +13,20 @@ Adhering to these guidelines ensures consistency, maintainability, and clarity f
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Core Libraries](#core-libraries)
-3. [Basic Project Layout](#basic-project-layout)
-4. [HTTP Handling with Hono](#http-handling-with-hono)
-5. [LLM Interaction and AI Patterns](#llm-interaction-and-ai-patterns)
-6. [Tool Usage Patterns](#tool-usage-patterns)
-7. [Durable Objects](#durable-objects)
+1. [Overview](#1-overview)
+2. [Core Libraries](#2-core-libraries)
+3. [Basic Project Layout](#3-basic-project-layout)
+4. [HTTP Handling with Hono](#4-http-handling-with-hono)
+5. [LLM Interaction and AI Patterns](#5-llm-interaction-and-ai-patterns)
+6. [Tool Usage Patterns](#6-tool-usage-patterns)
+7. [Durable Objects](#7-durable-objects)
    - [How to Add a Durable Object](#71-how-to-add-a-durable-object)
-8. [Workflows](#workflows)
-   - [How to Add a Workflow](#how-to-add-a-workflow)
-   - [Step-by-Step Patterns](#step-by-step-patterns)
-9. [Parallel Calls and Aggregation](#parallel-calls-and-aggregation)
-10. [Configuration Files and Deployment](#configuration-files-and-deployment)
-11. [Style Conventions and Coding Tips](#style-conventions-and-coding-tips)
+8. [Workflows](#8-workflows)
+   - [How to Add a Workflow](#81-how-to-add-a-workflow)
+   - [Step-by-Step Patterns](#82-step-by-step-patterns)
+9. [Parallel Calls and Aggregation](#9-parallel-calls-and-aggregation)
+10. [Configuration Files and Deployment](#10-configuration-files-and-deployment)
+11. [Style Conventions and Coding Tips](#11-style-conventions-and-coding-tips)
 
 ---
 
